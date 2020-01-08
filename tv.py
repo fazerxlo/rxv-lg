@@ -20,11 +20,11 @@ class RxvLGTv:
         self.store = {}
 
     def is_running(self):
-        for i in range(0,15):
+        for i in range(0, 15):
             try:
                 RxvLogger.debug("TV running?: " + str(self.cec_tv.is_on()))
-            except:
-                RxvLogger.debug("Unable to get TV status, retry")
+            except Exception as e:
+                RxvLogger.debug("Unable to get TV status, retry: " + str(e))
                 time.sleep(3)
             else:
                 break
@@ -38,6 +38,7 @@ class RxvLGTv:
     def register_volume_control(self, callback):
         lg = self.connect()
         media = MediaControl(lg)
+        RxvLogger.debug("callback registered")
         media.subscribe_get_volume(callback)
 
     def power_off(self):
@@ -52,8 +53,11 @@ class RxvLGTv:
         time.sleep(2)
 
     def connect(self):
+
+        if not self.is_running():
+            self.start()
         RxvLogger.debug("TV connect ip:" + self.ip)
-        for i in range(0,10):
+        for i in range(0, 10):
             try:
                 lg = WebOSClient(self.ip)
                 lg.connect()
@@ -72,16 +76,19 @@ class RxvLGTv:
                     lg_sys.notify("RxvLG: Registration successful!")
             self.save_store()
             return lg
-        except:
+        except Exception as e:
             RxvLogger.log("Registration failed exiting!")
+            RxvLogger.debug("Exception" + str(e))
             sys.exit(1)
 
     def check_and_create_store(self):
         RxvLogger.debug("TV connect read key")
-        f = open(RxvLGTv.KEY_FILE, "a+")
-        f.close()
-        with open(RxvLGTv.KEY_FILE, 'r+') as file:
-            self.store = yaml.full_load(file)
+
+        try:
+            with open(RxvLGTv.KEY_FILE, 'r+') as file:
+                self.store = yaml.full_load(file)
+        except IOError:
+            self.store = {}
 
         RxvLogger.debug("TV connect key:" + str(self.store))
         if not self.key_correct():
@@ -97,9 +104,10 @@ class RxvLGTv:
         self.check_and_create_store()
         if not self.key_correct():
             RxvLogger.log("LG key required please accept connection on tv:")
-            self.start()
-            RxvLogger.log("Turning on TV and wait 10s")
-            time.sleep(10)
+            if not self.is_running():
+                RxvLogger.log("Turning on TV and wait for boot 10s")
+                self.start()
+                time.sleep(10)
             self.connect()
 
     def key_correct(self):

@@ -19,3 +19,4 @@ As a result Kodi plugin will be crated
 - poweting on Receiver an selecting TV will power up TV
 - power off TV will power off receiver if TV input were used
 - power off receiver wneh TV is selected will power off TV
+- volume control using TV remote

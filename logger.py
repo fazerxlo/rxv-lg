@@ -1,5 +1,6 @@
 import os
 
+
 class RxvLogger:
 
     DEBUG_ENABLED = (os.environ.get('RXV_DEBUG') is not None)
