@@ -1,7 +1,7 @@
 import sys
 import time
+import subprocess
 
-import cec as cec
 import yaml
 from pywebostv.connection import WebOSClient
 from pywebostv.controls import SystemControl, MediaControl
@@ -9,30 +9,54 @@ from logger import RxvLogger
 
 
 class RxvLGTv:
-    KEY_FILE = 'authkey.yaml'
+    KEY_FILE = sys.path[0] + 'authkey.yaml'
 
     def __init__(self, ip):
         self.ip = ip
-        cec.init()
-        self.cec_tv = cec.Device(cec.CECDEVICE_TV)
-        RxvLogger.debug("TV ECE connect" + self.cec_tv.osd_string)
         RxvLogger.log("TV connect ip: " + self.ip)
         self.store = {}
 
     def is_running(self):
-        for i in range(0, 15):
-            try:
-                RxvLogger.debug("TV running?: " + str(self.cec_tv.is_on()))
-            except Exception as e:
-                RxvLogger.debug("Unable to get TV status, retry: " + str(e))
-                time.sleep(3)
-            else:
-                break
-        return self.cec_tv.is_on()
+
+        # list of strings representing the command
+        cmd = ['ping', '-c', '1',  self.ip]
+        return self.run_os_command(cmd) == 0
+
+    def run_os_command(self, args):
+        try:
+            # stdout = subprocess.PIPE lets you redirect the output
+            RxvLogger.debug(' '.join(args))
+            res = subprocess.Popen(args, stdout=subprocess.PIPE)
+        except OSError:
+            RxvLogger.info("error: popen")
+            exit(-1)  # if the subprocess call failed, there's not much point in continuing
+
+        res.wait()  # wait for process to finish; this also sets the returncode variable inside 'res'
+        if res.returncode != 0:
+            RxvLogger.debug("  os.wait:exit status != 0\n")
+        else:
+            RxvLogger.debug("os.wait:({},{})".format(res.pid, res.returncode))
+
+            # access the output from stdout
+            result = res.stdout.read()
+            RxvLogger.debug("after read: {}".format(result))
+
+        return res.returncode
 
     def start(self):
         RxvLogger.log("TV power on")
-        self.cec_tv.power_on()
+        trying = 0
+        while trying < 10:
+            self.run_os_command(['/usr/bin/kodi-send', '-a', 'CECActivateSource'])
+            time.sleep(2)
+            if self.is_running():
+                trying = 11
+            elif trying > 10:
+                RxvLogger.info("Could not turn on TV")
+                return
+            else:
+                RxvLogger.debug("Retrying connect TV")
+                time.sleep(1)
         time.sleep(30)
 
     def register_volume_control(self, callback):
