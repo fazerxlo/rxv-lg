@@ -9,7 +9,7 @@ from logger import RxvLogger
 
 
 class RxvLGTv:
-    KEY_FILE = sys.path[0] + 'authkey.yaml'
+    KEY_FILE = sys.path[0] + '/authkey.yaml'
 
     def __init__(self, ip):
         self.ip = ip
