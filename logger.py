@@ -1,6 +1,6 @@
 import os
 import sys
-
+from datetime import datetime
 
 class RxvLogger:
 
@@ -11,7 +11,9 @@ class RxvLogger:
 
     @staticmethod
     def log(txt):
-        txt = RxvLogger.__name__ + ": " + txt
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        txt = RxvLogger.__name__ + ":(" + current_time + ") " + txt
         if RxvLogger.DEBUG_ENABLED:
             print(txt)
         else:
@@ -21,6 +23,10 @@ class RxvLogger:
     def debug(txt):
         if RxvLogger.DEBUG_ENABLED:
             RxvLogger.log("DEBUG: " + txt)
+
+    @staticmethod
+    def error(txt):
+        RxvLogger.log("ERROR: " + txt)
 
     @staticmethod
     def write_to_file(txt):

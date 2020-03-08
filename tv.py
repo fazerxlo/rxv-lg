@@ -1,6 +1,7 @@
 import sys
 import time
 import subprocess
+import socket
 
 import yaml
 from pywebostv.connection import WebOSClient
@@ -10,6 +11,7 @@ from logger import RxvLogger
 
 class RxvLGTv:
     KEY_FILE = sys.path[0] + '/authkey.yaml'
+    WEBOS_PORT = 3000
 
     def __init__(self, ip):
         self.ip = ip
@@ -17,10 +19,10 @@ class RxvLGTv:
         self.store = {}
 
     def is_running(self):
-
-        # list of strings representing the command
-        cmd = ['ping', '-c', '1',  self.ip]
-        return self.run_os_command(cmd) == 0
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)  # 2 Second Timeout
+        result = sock.connect_ex((self.ip, RxvLGTv.WEBOS_PORT))
+        return result == 0
 
     def run_os_command(self, args):
         try:
@@ -28,7 +30,7 @@ class RxvLGTv:
             RxvLogger.debug(' '.join(args))
             res = subprocess.Popen(args, stdout=subprocess.PIPE)
         except OSError:
-            RxvLogger.info("error: popen")
+            RxvLogger.error("error: popen")
             exit(-1)  # if the subprocess call failed, there's not much point in continuing
 
         res.wait()  # wait for process to finish; this also sets the returncode variable inside 'res'
@@ -52,7 +54,7 @@ class RxvLGTv:
             if self.is_running():
                 trying = 11
             elif trying > 10:
-                RxvLogger.info("Could not turn on TV")
+                RxvLogger.error("Could not turn on TV")
                 return
             else:
                 RxvLogger.debug("Retrying connect TV")
@@ -86,7 +88,7 @@ class RxvLGTv:
                 lg = WebOSClient(self.ip)
                 lg.connect()
             except Exception as e:
-                RxvLogger.log("Unable connect TV, retry e: " + str(e))
+                RxvLogger.error("Unable connect TV, retry e: " + str(e))
                 time.sleep(3)
             else:
                 break
@@ -101,9 +103,9 @@ class RxvLGTv:
             self.save_store()
             return lg
         except Exception as e:
-            RxvLogger.log("Registration failed exiting!")
+            RxvLogger.error("Registration failed exiting!")
             RxvLogger.debug("Exception" + str(e))
-            sys.exit(1)
+            #sys.exit(1)
 
     def check_and_create_store(self):
         RxvLogger.debug("TV connect read key")
